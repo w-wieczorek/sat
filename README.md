@@ -74,7 +74,7 @@ else
 end
 ```
 
-Generally, there are four types of constraints. Suppose that we have three
+Generally, there are five types of constraints. Suppose that we have three
 binary variables: `x[1]`, `x[2]`, and `x[3]` (i.e., six literals `x[1]`, `x[2]`, `x[3]`,
 `~x[1]`, `~x[2]`, and `~x[3]`), which can be declare in a program by
 
@@ -82,9 +82,11 @@ binary variables: `x[1]`, `x[2]`, and `x[3]` (i.e., six literals `x[1]`, `x[2]`,
 x = LiteralFactory.new (1..3)
 ```
 
-* A simple clause `p.addClause x[1], ~x[2], x[3]` which means `x[1]` or `~x[2]` or `x[3]`.
+* A fact `p.addFact x[1]` which means `x[1]`.
 
-* A simple constraint `p.addConstraint ~x[1], x[2], x[3]` which means `x[1]` or `~x[2]` or `~x[3]`.
+* A clause `p.addClause x[1], ~x[2], x[3]` which means `x[1]` or `~x[2]` or `x[3]`.
+
+* A constraint `p.addConstraint ~x[1], x[2], x[3]` which means `x[1]` or `~x[2]` or `~x[3]`.
 
 * A simple rule `p.addRule x[1], ~[x2], implies: ~x[3]` which means `~x[1]` or `x[2]` or `~x[3]`.
 
