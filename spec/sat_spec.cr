@@ -79,5 +79,122 @@ describe "Sat" do
       counter += 1 if prog.value(is_at[v, i]) == 1
     end
     counter.should eq(4)
-  end  
+  end
+
+  it "solves a combinatorial problem (Graph Coloring)" do
+    prog = Sat::Program.new
+    Sat::LiteralFactory.reset
+    graph = { vertices: Set{0, 1, 2, 3, 4}, 
+      edges: Set{ {0, 1}, {0, 3}, {0, 4}, {1, 2}, {2, 3}, {3, 4} } }
+    cs = [:red, :green, :blue]
+    pairs = [] of {Int32, Symbol}
+    graph[:vertices].each { |v| cs.each { |c| pairs << {v, c} } }
+    color = Sat::LiteralFactory.new pairs
+    graph[:vertices].each do |v|
+      prog.ensureOneFromArray(cs.map{ |c| color[v, c] })
+    end
+    graph[:edges].each do |v, u|
+      cs.each { |c| prog.addConstraint color[v, c], color[u, c] }
+    end
+    prog.addFact color[0, :red]
+    prog.addFact color[1, :blue]
+    prog.addFact color[3, :green]
+    prog.solve
+    prog.status.should eq(:satisfiable)
+    prog.value(color[2, :red]).should eq(1)
+    prog.value(color[4, :blue]).should eq(1)
+  end
+
+  it "solves a combinatorial optimization problem (Minimum Vertex Cover)" do
+    graph = { vertices: (0..7).to_set, 
+      edges: Set{ {0, 1}, {0, 2}, {0, 3}, {0, 6}, {1, 2}, 
+        {1, 3}, {1, 5}, {1, 7}, {2, 7}, {3, 6}, {4, 6}, {5, 7} } }
+    prog = Sat::Program.new
+    Sat::LiteralFactory.reset
+    n = 4
+    indexes = [] of Tuple(Int32, Int32)
+    graph[:vertices].each { |v| (1..n).each { |i| indexes << {v, i} } }
+    taken = Sat::LiteralFactory.new indexes
+    (1..n).each do |i|
+      prog.ensureOneFromArray(graph[:vertices].map{ |v| taken[v, i] })
+    end
+    graph[:edges].each do |u, v|
+      clause = [] of Sat::Literal
+      (1..n).each do |i|
+        clause << taken[u, i]
+        clause << taken[v, i]
+      end
+      prog.addClauseFromArray clause
+    end
+    prog.solve
+    prog.status.should eq(:satisfiable)
+    answer = Set(Int32).new
+    indexes.each do |v, i|
+      answer.add v if prog.value(taken[v, i]) == 1
+    end
+    answer.should eq(Set{0, 1, 6, 7})
+  end
+
+  it "solves a combinatorial problem (Clique)" do
+    prog = Sat::Program.new
+    Sat::LiteralFactory.reset
+    graph = { vertices: (0..7).to_set, 
+      edges: Set{ {0, 1}, {0, 2}, {0, 3}, {1, 2}, {1, 5}, 
+        {1, 7}, {2, 5}, {2, 7}, {3, 4}, {3, 6}, {4, 6}, {5, 7} } }
+    n = 5
+    indexes = [] of Tuple(Int32, Int32)
+    graph[:vertices].each { |v| (1..n).each { |i| indexes << {v, i} } }
+    taken = Sat::LiteralFactory.new indexes
+    (1..n).each do |i|
+      prog.ensureOneFromArray(graph[:vertices].map{ |v| taken[v, i] })
+    end
+    graph[:vertices].each do |v|
+      (1..n).each do |i| 
+        (1..n).each do |j| 
+          prog.addConstraint taken[v, i], taken[v, j] if i < j
+        end
+      end
+    end
+    graph[:vertices].each do |u|
+      graph[:vertices].each do |v|
+        unless u >= v || graph[:edges].includes?({u, v})
+          (1..n).each do |i| 
+            (1..n).each do |j| 
+              prog.addConstraint taken[u, i], taken[v, j] if i != j
+            end
+          end
+        end
+      end
+    end
+    prog.solve
+    prog.status.should eq(:unsatisfiable)
+  end
+
+  it "solves a combinatorial problem (Kernel)" do
+    prog = Sat::Program.new
+    Sat::LiteralFactory.reset
+    graph = { vertices: Set{0, 1, 2, 3, 4, 5, 6, 7}, 
+      edges: Set{ {0, 1}, {0, 2}, {1, 2}, {2, 6}, {3, 1}, {3, 2}, {4, 0}, {4, 5} } }
+    taken = Sat::LiteralFactory.new graph[:vertices]
+    graph[:vertices].each do |v|
+      outdegree = 0
+      graph[:edges].each { |u, w| outdegree += 1 if v == u }
+      prog.addFact taken[v] if outdegree == 0
+      if outdegree > 0
+        arr = [~taken[v]]
+        graph[:edges].each { |u, w| arr << ~taken[w] if v == u }
+        prog.addConstraintFromArray arr
+      end
+    end
+    graph[:edges].each do |u, v|
+      prog.addConstraint taken[u], taken[v]
+    end
+    prog.solve
+    prog.status.should eq(:satisfiable)
+    answer = Set(Int32).new
+    graph[:vertices].each do |v|
+      answer.add v if prog.value(taken[v]) == 1
+    end
+    answer.should eq(Set{1, 5, 6, 7})
+  end
 end
