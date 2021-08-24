@@ -76,7 +76,7 @@ end
 
 Generally, there are five types of constraints. Suppose that we have three
 binary variables: `x[1]`, `x[2]`, and `x[3]` (i.e., six literals `x[1]`, `x[2]`, `x[3]`,
-`~x[1]`, `~x[2]`, and `~x[3]`), which can be declare in a program by
+`~x[1]`, `~x[2]`, and `~x[3]`), which we declare in a program by
 
 ```crystal
 x = LiteralFactory.new (1..3)
