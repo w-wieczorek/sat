@@ -197,4 +197,42 @@ describe "Sat" do
     end
     answer.should eq(Set{1, 5, 6, 7})
   end
+
+  it "solves a set cover problem" do
+    prog = Sat::Program.new
+    Sat::LiteralFactory.reset
+    n = 5  # universum = Set{1, 2, 3, 4, 5}
+    k = 2  # find k subsets to cover universum
+    family = [ Set{1, 2, 3}, Set{2, 4}, Set{3, 4}, Set{4, 5} ]
+    indexes = [] of Tuple(Int32, Int32)
+    m = family.size
+    (0...m).each { |i| (1..k).each { |j| indexes << {i, j} } }
+    x = Sat::LiteralFactory.new indexes
+    (1..k).each do |j|
+      prog.addClauseFromArray (0...m).map{ |i| x[i, j] }
+      (0..m-2).each do |a|
+        (a+1..m-1).each do |b|
+          prog.addClause ~x[a, j], ~x[b, j]
+        end
+      end
+    end
+    (1..n).each do |u|
+      arr = [] of Sat::Literal
+      (0...m).each do |i|
+        if family[i].includes? u
+          (1..k).each { |j| arr << x[i, j] }
+        end
+      end
+      prog.addClauseFromArray arr
+    end
+    prog.solve
+    prog.status.should eq(:satisfiable)
+    answer = Set(Int32).new
+    (0...m).each do |i|
+      (1..k).each do |j|
+        answer.add i if prog.value(x[i, j]) == 1
+      end
+    end
+    answer.should eq(Set{0, 3})
+  end
 end
